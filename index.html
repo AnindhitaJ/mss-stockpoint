@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12355B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>MSS Stockpoint</title>
+<style>
+:root{--bg:#F3F6F9;--card:#fff;--ink:#16202B;--mut:#5F6D7E;--line:#D9E1EA;--chip:#E5ECF4;--btn:#12355B;--acc:#E8710A;--okbg:#DDF3E8;--okfg:#14653F;--wbg:#FCEFD3;--wfg:#7A4A00}
+@media(prefers-color-scheme:dark){:root{--bg:#0D1621;--card:#16222F;--ink:#E8EEF5;--mut:#9AA8B9;--line:#273648;--chip:#1E2E41;--btn:#2F6DB5;--okbg:#17402F;--okfg:#9BE3BE;--wbg:#4A3A12;--wfg:#F4D690}}
+*{box-sizing:border-box;margin:0}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums}
+.top{background:#12355B;color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;position:sticky;top:0;z-index:5}
+.top h1{font-size:19px;font-weight:700;letter-spacing:-.2px}
+.top small{opacity:.75;font-size:12px}
+main{padding:14px 14px calc(88px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.grid .card{margin:0}
+.stat b{display:block;font-size:22px;line-height:1.2}
+.muted{color:var(--mut);font-size:13px}
+h2{font-size:15px;margin:18px 0 8px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px}
+.chip{border:0;background:var(--chip);color:var(--ink);padding:8px 14px;border-radius:20px;font:inherit;font-size:13px;white-space:nowrap}
+.chip.on{background:#12355B;color:#fff}
+.badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px;background:var(--chip);white-space:nowrap}
+.badge.mss{background:#12355B;color:#fff}.badge.ok{background:var(--okbg);color:var(--okfg)}.badge.wait{background:var(--wbg);color:var(--wfg)}
+.btn{border:0;background:var(--btn);color:#fff;padding:12px 16px;border-radius:10px;font:inherit;font-weight:600;width:100%}
+.btn.sm{width:auto;padding:7px 12px;font-size:13px}.btn.ghost{background:var(--chip);color:var(--ink)}
+.pal{display:flex;gap:2px;margin:10px 0 4px}
+.pal i{flex:1;height:10px;border-radius:2px;background:var(--chip)}.pal i.u{background:var(--acc)}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);padding:9px 0 8px;font:inherit;font-size:11px}
+.tabs button.on{color:var(--acc);font-weight:700}
+.tabs i{display:block;font-style:normal;font-size:20px;line-height:1.3}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:10}
+.sheet.open{display:flex}
+.panel{background:var(--card);width:100%;max-width:640px;max-height:90%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));margin:auto}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--bg);color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(8px);background:#16202B;color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:20;max-width:90%}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.note{background:var(--wbg);color:var(--wfg);border-radius:10px;padding:9px 12px;font-size:12px;margin-bottom:12px}
+.sw{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px}
+.sw input{width:auto}
+.tot{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><h1 id="t">Beranda</h1><small>PT Keramik Nusantara (supplier contoh)</small></header>
+<main id="app"></main>
+<nav class="tabs">
+<button data-t="home"><i>🏠</i>Beranda</button>
+<button data-t="wh"><i>🏭</i>Gudang</button>
+<button data-t="stok"><i>📦</i>Stok</button>
+<button data-t="ord"><i>🧾</i>Order</button>
+</nav>
+<div class="sheet" id="sh"><div class="panel" id="pn"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const K="mss-stockpoint-v1",HANDLING=25000;
+const WH=[
+{id:"bjm",name:"MSS Banjarmasin",city:"Banjarmasin",reg:"Kalimantan",type:"MSS",free:120,tot:300,rate:12000,stores:84,eta:"1 hari"},
+{id:"ptk",name:"MSS Pontianak",city:"Pontianak",reg:"Kalimantan",type:"MSS",free:60,tot:200,rate:11000,stores:51,eta:"1 hari"},
+{id:"smd",name:"Gudang Mitra Samarinda",city:"Samarinda",reg:"Kalimantan",type:"Partner",free:90,tot:150,rate:10000,stores:67,eta:"1-2 hari"},
+{id:"mks",name:"MSS Makassar",city:"Makassar",reg:"Sulawesi",type:"MSS",free:150,tot:400,rate:13000,stores:112,eta:"1 hari"},
+{id:"mdn",name:"Gudang Mitra Medan",city:"Medan",reg:"Sumatera",type:"Partner",free:40,tot:180,rate:10500,stores:95,eta:"1-2 hari"}];
+const TOKO=["TB Jaya Abadi","UD Sinar Makmur","TB Maju Bersama","TB Sentosa","UD Karya Mandiri"];
+const ST=["Diproses","Dikirim","Selesai"];
+const rp=n=>"Rp "+Math.round(n).toLocaleString("id-ID");
+const $=s=>document.querySelector(s);
+const wh=id=>WH.find(w=>w.id===id);
+const sku=id=>st.skus.find(s=>s.id===id);
+const kv=(a,b)=>`<div class="row" style="margin-top:6px"><span class="muted">${a}</span><b>${b}</b></div>`;
+function seed(){return{active:{bjm:10},reqs:[],n:10,oid:1003,
+skus:[{id:1,name:"Keramik Lantai 40x40 Putih",wh:"bjm",qty:320,ready:true},{id:2,name:"Keramik Dinding 30x60 Abu",wh:"bjm",qty:140,ready:true},{id:3,name:"Keramik Lantai 60x60 Krem",wh:"bjm",qty:0,ready:false}],
+inb:[],orders:[{id:"SO-1001",toko:"TB Jaya Abadi",sku:1,qty:20,wh:"bjm",s:2},{id:"SO-1002",toko:"UD Sinar Makmur",sku:2,qty:12,wh:"bjm",s:1}]}}
+function load(){try{const s=localStorage.getItem(K);if(s)return JSON.parse(s)}catch(e){}return seed()}
+let st=load(),tab="home",reg="Semua",cur=null;
+function save(){try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),2200)}
+const open=h=>{$("#pn").innerHTML=h;$("#sh").classList.add("open")},close=()=>$("#sh").classList.remove("open");
+
+const V={
+home(){
+ const pal=Object.values(st.active).reduce((a,b)=>a+b,0);
+ const stock=st.skus.reduce((a,s)=>a+s.qty,0);
+ const sim=Object.entries(st.active).reduce((a,[k,p])=>a+p*wh(k).rate*30,0);
+ const han=st.orders.length*HANDLING;
+ return `<div class="note">Prototype: data, tarif, dan biaya hanya contoh ilustrasi.</div>
+ <div class="grid"><div class="card stat"><b>${pal}</b><span class="muted">Pallet terpakai</span></div>
+ <div class="card stat"><b>${stock.toLocaleString("id-ID")}</b><span class="muted">Total stok (dus)</span></div>
+ <div class="card stat"><b>${Object.keys(st.active).length}</b><span class="muted">Gudang aktif</span></div>
+ <div class="card stat"><b>${st.orders.length}</b><span class="muted">Order bulan ini</span></div></div>
+ <div class="card"><div class="row"><b>Estimasi tagihan bulan ini</b><span class="badge ok">Pilot: gratis simpan 2 minggu</span></div>
+ ${kv("Biaya simpan",rp(sim))}${kv(`Handling dan kirim (${st.orders.length} order)`,rp(han))}
+ <div class="tot">${kv("Total",rp(sim+han))}</div></div>
+ <div class="card"><b>Cara kerja</b><p class="muted" style="margin-top:6px">Pilih gudang dekat toko target, ajukan slot, kirim stok, lalu stok tampil sebagai Ready Stock di marketplace dan order toko otomatis dikirim dari gudang terdekat.</p></div>
+ <button class="btn ghost" data-a="reset">Reset data contoh</button>`},
+whs(){
+ const rs=["Semua",...new Set(WH.map(w=>w.reg))];
+ const list=WH.filter(w=>reg==="Semua"||w.reg===reg);
+ let h=`<div class="chips">${rs.map(r=>`<button class="chip ${r===reg?"on":""}" data-r="${r}">${r}</button>`).join("")}</div>`;
+ h+=list.map(w=>{const u=Math.round((w.tot-w.free)/w.tot*20);
+  return `<div class="card" data-a="wd" data-id="${w.id}" role="button" tabindex="0">
+  <div class="row"><b>${w.name}</b><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner"}</span></div>
+  <div class="muted">${w.city}, ${w.reg}${st.active[w.id]?" (gudang aktif)":""}</div>
+  <div class="pal">${Array.from({length:20},(_,i)=>`<i class="${i<u?"u":""}"></i>`).join("")}</div>
+  <div class="row muted"><span>${w.free} pallet kosong</span><span>${rp(w.rate)} per pallet/hari</span></div>
+  <div class="row muted"><span>${w.stores} toko dalam jangkauan</span><span>Tiba ${w.eta}</span></div></div>`}).join("");
+ h+=`<h2>Pengajuan saya</h2>`;
+ h+=st.reqs.length?st.reqs.slice().reverse().map(r=>`<div class="card"><div class="row"><b>${wh(r.wh).name}</b><span class="badge ${r.s?"ok":"wait"}">${r.s?"Disetujui":"Menunggu review ops"}</span></div>
+  <div class="muted">${r.pallets} pallet, ${r.months} bulan, ${r.cat}</div>
+  ${r.s?"":`<button class="btn sm ghost" style="margin-top:8px" data-a="ap" data-id="${r.id}">Simulasikan disetujui ops</button>`}</div>`).join(""):`<p class="muted">Belum ada pengajuan. Pilih gudang di atas untuk mengajukan slot.</p>`;
+ return h},
+stok(){
+ let h=`<button class="btn" data-a="inb">Jadwalkan stok masuk</button><h2>Inventory</h2>`;
+ h+=st.skus.map(s=>`<div class="card"><div class="row"><b>${s.name}</b>${s.ready&&s.qty>0?`<span class="badge ok">Ready Stock</span>`:`<span class="badge">Tidak tampil</span>`}</div>
+  <div class="muted">${wh(s.wh).name}</div>${kv("Stok",s.qty.toLocaleString("id-ID")+" dus")}
+  <label class="sw"><input type="checkbox" data-a="tg" data-id="${s.id}" ${s.ready?"checked":""}> Tampilkan di marketplace</label></div>`).join("");
+ h+=`<h2>Stok masuk</h2>`;
+ h+=st.inb.length?st.inb.slice().reverse().map(i=>`<div class="card"><div class="row"><b>${sku(i.sku).name}</b><span class="badge ${i.s?"ok":"wait"}">${i.s?"Diterima gudang":"Dijadwalkan"}</span></div>
+  <div class="muted">${i.qty} dus ke ${wh(sku(i.sku).wh).name}, ${new Date(i.date).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</div>
+  ${i.s?"":`<button class="btn sm ghost" style="margin-top:8px" data-a="inr" data-id="${i.id}">Simulasikan diterima gudang</button>`}</div>`).join(""):`<p class="muted">Belum ada jadwal. Jadwalkan stok masuk agar barang tampil di marketplace.</p>`;
+ return h},
+ord(){
+ let h=`<button class="btn" data-a="no">Simulasikan order baru dari toko</button><h2>Order dari toko</h2>`;
+ h+=st.orders.slice().reverse().map(o=>`<div class="card"><div class="row"><b>${o.id}</b><span class="badge ${o.s==2?"ok":"wait"}">${ST[o.s]}</span></div>
+  <div>${o.toko}</div><div class="muted">${o.qty} dus ${sku(o.sku).name}</div>
+  <div class="muted">Dikirim dari ${wh(o.wh).name}, tiba ${wh(o.wh).eta}</div>
+  ${o.s<2?`<button class="btn sm ghost" style="margin-top:8px" data-a="adv" data-id="${o.id}">Majukan status</button>`:""}</div>`).join("");
+ return h}};
+function render(){
+ $("#t").textContent={home:"Beranda",wh:"Cari gudang",stok:"Stok saya",ord:"Order"}[tab];
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+ $("#app").innerHTML=V[tab==="wh"?"whs":tab]();save()}
+function est(){const w=wh(cur);if(!w)return;const p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1)),m=+$("#fm").value;
+ $("#fe").textContent=rp(p*w.rate*30)+" per bulan, "+rp(p*w.rate*30*m)+" untuk "+m+" bulan"}
+const A={
+wd(id){cur=id;const w=wh(id);open(`<div class="row"><h2 style="margin:0">${w.name}</h2><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner"}</span></div>
+ <p class="muted">${w.city}, ${w.reg}</p>
+ <div class="grid" style="margin-top:12px"><div class="card stat"><b>${w.free}</b><span class="muted">Pallet kosong</span></div><div class="card stat"><b>${w.stores}</b><span class="muted">Toko dalam jangkauan</span></div></div>
+ ${kv("Tarif simpan",rp(w.rate)+" per pallet/hari")}${kv("Handling dan kirim",rp(HANDLING)+" per order")}${kv("Estimasi tiba di toko",w.eta)}
+ <label>Jumlah pallet</label><input id="fp" type="number" inputmode="numeric" min="1" max="${w.free}" value="10">
+ <label>Durasi</label><select id="fm"><option value="1">1 bulan</option><option value="3">3 bulan</option><option value="6">6 bulan</option></select>
+ <label>Kategori barang</label><select id="fc"><option>Keramik</option><option>Cat</option><option>Semen</option><option>Baja ringan</option></select>
+ <div class="card" style="margin-top:14px"><div class="muted">Estimasi biaya simpan</div><b id="fe"></b></div>
+ <button class="btn" data-a="rq" data-id="${w.id}">Ajukan slot</button>`);est()},
+rq(id){const w=wh(id),p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1));
+ st.reqs.push({id:st.n++,wh:id,pallets:p,months:+$("#fm").value,cat:$("#fc").value,s:0});
+ close();tab="wh";render();toast("Pengajuan dikirim ke tim ops MSS")},
+ap(id){const r=st.reqs.find(x=>x.id==id);r.s=1;st.active[r.wh]=(st.active[r.wh]||0)+r.pallets;render();toast("Slot disetujui, gudang aktif")},
+tg(id){const s=sku(+id);s.ready=!s.ready;render();toast(s.ready?"Stok tampil di marketplace":"Stok disembunyikan")},
+inb(){const o=st.skus.filter(s=>st.active[s.wh]);const d=new Date(Date.now()+864e5).toISOString().slice(0,10);
+ open(`<h2 style="margin:0">Jadwalkan stok masuk</h2>
+ <label>Barang</label><select id="is">${o.map(s=>`<option value="${s.id}">${s.name} (${wh(s.wh).name})</option>`).join("")}</select>
+ <label>Jumlah (dus)</label><input id="iq" type="number" inputmode="numeric" min="1" value="100">
+ <label>Tanggal kirim ke gudang</label><input id="id" type="date" value="${d}">
+ <button class="btn" style="margin-top:16px" data-a="ig">Jadwalkan</button>`)},
+ig(){const q=parseInt($("#iq").value)||0;if(q<1)return toast("Isi jumlah minimal 1 dus");
+ st.inb.push({id:st.n++,sku:+$("#is").value,qty:q,date:$("#id").value,s:0});close();render();toast("Jadwal stok masuk dibuat")},
+inr(id){const i=st.inb.find(x=>x.id==id);i.s=1;sku(i.sku).qty+=i.qty;render();toast("Stok bertambah "+i.qty+" dus")},
+no(){const c=st.skus.filter(s=>s.qty>0&&s.ready);if(!c.length)return toast("Tidak ada stok yang tampil di marketplace");
+ const s=c[Math.random()*c.length|0],q=Math.min(s.qty,5+(Math.random()*25|0));s.qty-=q;
+ st.orders.push({id:"SO-"+st.oid++,toko:TOKO[Math.random()*TOKO.length|0],sku:s.id,qty:q,wh:s.wh,s:0});render();toast("Order masuk, stok berkurang "+q+" dus")},
+adv(id){const o=st.orders.find(x=>x.id===id);if(o.s<2)o.s++;render()},
+reset(){st=seed();reg="Semua";render();toast("Data contoh dikembalikan")}};
+document.addEventListener("click",e=>{
+ if(e.target.id==="sh")return close();
+ const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;render();return scrollTo(0,0)}
+ const r=e.target.closest("[data-r]");if(r){reg=r.dataset.r;return render()}
+ const a=e.target.closest("[data-a]");if(a&&A[a.dataset.a])A[a.dataset.a](a.dataset.id)});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&e.target.dataset.a==="wd"){e.preventDefault();A.wd(e.target.dataset.id)}});
+document.addEventListener("input",e=>{if(e.target.id==="fp"||e.target.id==="fm")est()});
+render();
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
