@@ -75,7 +75,7 @@ const $=s=>document.querySelector(s);
 const wh=id=>WH.find(w=>w.id===id);
 const sku=id=>st.skus.find(s=>s.id===id);
 const kv=(a,b)=>`<div class="row" style="margin-top:6px"><span class="muted">${a}</span><b>${b}</b></div>`;
-function seed(){return{active:{bjm:10},reqs:[],n:10,oid:1003,
+function seed(){return{active:{bjm:12},reqs:[],n:10,oid:1003,
 skus:[{id:1,name:"Keramik Lantai 40x40 Putih",wh:"bjm",qty:320,ready:true},{id:2,name:"Keramik Dinding 30x60 Abu",wh:"bjm",qty:140,ready:true},{id:3,name:"Keramik Lantai 60x60 Krem",wh:"bjm",qty:0,ready:false}],
 inb:[],orders:[{id:"SO-1001",toko:"TB Jaya Abadi",sku:1,qty:20,wh:"bjm",s:2},{id:"SO-1002",toko:"UD Sinar Makmur",sku:2,qty:12,wh:"bjm",s:1}]}}
 function load(){try{const s=localStorage.getItem(K);if(s)return JSON.parse(s)}catch(e){}return seed()}
@@ -84,6 +84,17 @@ function save(){try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}}
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),2200)}
 const open=h=>{$("#pn").innerHTML=h;$("#sh").classList.add("open")},close=()=>$("#sh").classList.remove("open");
 
+const DPP=50;
+const inN=i=>i.name||inN(i),inW=i=>i.wh||inW(i);
+const qtyAt=k=>st.skus.filter(s=>s.wh===k).reduce((a,s)=>a+s.qty,0);
+const pend=k=>st.inb.filter(i=>!i.s&&inW(i)===k).reduce((a,i)=>a+i.qty,0);
+const used=k=>Math.ceil(qtyAt(k)/DPP);
+function GS(){const m=Object.entries(st.active);
+ return `<h2 style="margin-top:0">Gudang saya</h2>`+(m.length?m.map(([k,p])=>{const u=used(k),pct=Math.min(100,Math.round(u/p*100));
+ return `<div class="card"><div class="row"><b>${wh(k).name}</b><span class="badge ok">Aktif</span></div>
+ <div style="height:8px;background:var(--chip);border-radius:4px;overflow:hidden;margin:10px 0 4px"><div style="height:100%;width:${pct}%;background:var(--acc)"></div></div>
+ ${kv("Jatah sewa",p+" pallet")}${kv("Terpakai",u+" pallet ("+qtyAt(k).toLocaleString("id-ID")+" dus)")}${kv("Sisa jatah",Math.max(0,p-u)+" pallet")}
+ <button class="btn sm ghost" style="margin-top:10px" data-a="wd" data-id="${k}">Tambah slot</button></div>`}).join(""):`<p class="muted">Belum ada gudang aktif. Ajukan slot di daftar di bawah.</p>`)}
 const V={
 home(){
  const pal=Object.values(st.active).reduce((a,b)=>a+b,0);
@@ -91,7 +102,7 @@ home(){
  const sim=Object.entries(st.active).reduce((a,[k,p])=>a+p*wh(k).rate*16,0);
  const han=st.orders.length*HANDLING;
  return `<div class="note">Prototype: data, tarif, dan biaya hanya contoh ilustrasi. Ganti peran di atas untuk melihat sisi Ops MSS dan Toko.</div>
- <div class="grid"><div class="card stat"><b>${pal}</b><span class="muted">Pallet terpakai</span></div>
+ <div class="grid"><div class="card stat"><b>${pal}</b><span class="muted">Jatah pallet</span></div>
  <div class="card stat"><b>${stock.toLocaleString("id-ID")}</b><span class="muted">Total stok (dus)</span></div>
  <div class="card stat"><b>${Object.keys(st.active).length}</b><span class="muted">Gudang aktif</span></div>
  <div class="card stat"><b>${st.orders.length}</b><span class="muted">Order bulan ini</span></div></div>
@@ -103,7 +114,7 @@ home(){
 whs(){
  const rs=["Semua",...new Set(WH.map(w=>w.reg))];
  const list=WH.filter(w=>reg==="Semua"||w.reg===reg);
- let h=`<div class="chips">${rs.map(r=>`<button class="chip ${r===reg?"on":""}" data-r="${r}">${r}</button>`).join("")}</div>`;
+ let h=GS()+`<h2>Cari gudang</h2><div class="chips">${rs.map(r=>`<button class="chip ${r===reg?"on":""}" data-r="${r}">${r}</button>`).join("")}</div>`;
  h+=list.map(w=>{const u=Math.round((w.tot-w.free)/w.tot*20);
   return `<div class="card" data-a="wd" data-id="${w.id}" role="button" tabindex="0" style="${w.type==="MSS"?"":"opacity:.6"}">
   <div class="row"><b>${w.name}</b><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner, fase 2"}</span></div>
@@ -122,8 +133,8 @@ stok(){
   <div class="muted">${wh(s.wh).name}</div>${kv("Stok",s.qty.toLocaleString("id-ID")+" dus")}
   <label class="sw"><input type="checkbox" data-a="tg" data-id="${s.id}" ${s.ready?"checked":""}> Tampilkan di marketplace</label></div>`).join("");
  h+=`<h2>Stok masuk</h2>`;
- h+=st.inb.length?st.inb.slice().reverse().map(i=>`<div class="card"><div class="row"><b>${sku(i.sku).name}</b><span class="badge ${i.s?"ok":"wait"}">${i.s?"Diterima gudang":"Dijadwalkan"}</span></div>
-  <div class="muted">${i.qty} dus ke ${wh(sku(i.sku).wh).name}, ${new Date(i.date).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</div>
+ h+=st.inb.length?st.inb.slice().reverse().map(i=>`<div class="card"><div class="row"><b>${inN(i)}</b><span class="badge ${i.s?"ok":"wait"}">${i.s?"Diterima gudang":"Dijadwalkan"}</span></div>
+  <div class="muted">${i.qty} dus ke ${wh(inW(i)).name}, ${new Date(i.date).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</div>
 </div>`).join(""):`<p class="muted">Belum ada jadwal. Jadwalkan stok masuk agar barang tampil di marketplace.</p>`;
  return h},
 ord(){
@@ -143,7 +154,7 @@ oslot(){const p=st.reqs.filter(r=>r.s==0),d=st.reqs.filter(r=>r.s>0);
  <div>${wh(r.wh).name}</div><div class="muted">${r.pallets} pallet, ${r.months} bulan, ${r.cat}</div><div class="muted">Slot kosong di gudang: ${wh(r.wh).free} pallet</div>
  <div class="row" style="margin-top:10px"><button class="btn sm ghost" data-a="rj" data-id="${r.id}">Tolak</button><button class="btn sm" data-a="ap" data-id="${r.id}">Setujui</button></div></div>`).join(""):emp("Tidak ada pengajuan. Ajukan slot dari sisi Supplier."))
  +`<h2>Sudah diputuskan</h2>`+(d.length?d.map(r=>`<div class="card"><div class="row"><b>${wh(r.wh).name}</b>${RB(r.s)}</div><div class="muted">${r.pallets} pallet, ${r.months} bulan</div></div>`).join(""):emp("Belum ada."))},
-oinb(){const p=st.inb.filter(i=>!i.s),d=st.inb.filter(i=>i.s),c=i=>`${i.qty} dus ${sku(i.sku).name}, ${wh(sku(i.sku).wh).name}`;
+oinb(){const p=st.inb.filter(i=>!i.s),d=st.inb.filter(i=>i.s),c=i=>`${i.qty} dus ${inN(i)}, ${wh(inW(i)).name}`;
  return `<h2 style="margin-top:0">Jadwal kedatangan</h2>`+(p.length?p.map(i=>`<div class="card"><b>${c(i)}</b><div class="muted">Tiba ${fd(i.date)}</div>
  <button class="btn sm" style="margin-top:10px" data-a="inr" data-id="${i.id}">Tandai diterima</button></div>`).join(""):emp("Tidak ada kedatangan terjadwal."))
  +`<h2>Sudah diterima</h2>`+(d.length?d.map(i=>`<div class="card"><b>${c(i)}</b></div>`).join(""):emp("Belum ada."))},
@@ -182,15 +193,20 @@ rq(id){const w=wh(id),p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1))
  close();tab="wh";render();toast("Pengajuan dikirim ke tim ops MSS")},
 ap(id){const r=st.reqs.find(x=>x.id==id);r.s=1;st.active[r.wh]=(st.active[r.wh]||0)+r.pallets;render();toast("Slot disetujui, gudang aktif")},
 tg(id){const s=sku(+id);s.ready=!s.ready;render();toast(s.ready?"Stok tampil di marketplace":"Stok disembunyikan")},
-inb(){const o=st.skus.filter(s=>st.active[s.wh]);const d=new Date(Date.now()+864e5).toISOString().slice(0,10);
+inb(){const a=Object.keys(st.active);if(!a.length)return toast("Belum ada gudang aktif. Ajukan slot dulu.");
+ const d=new Date(Date.now()+864e5).toISOString().slice(0,10),nm=[...new Set(st.skus.map(s=>s.name))];
  open(`<h2 style="margin:0">Jadwalkan stok masuk</h2>
- <label>Barang</label><select id="is">${o.map(s=>`<option value="${s.id}">${s.name} (${wh(s.wh).name})</option>`).join("")}</select>
- <label>Jumlah (dus)</label><input id="iq" type="number" inputmode="numeric" min="1" value="100">
+ <label>Gudang tujuan</label><select id="iw">${a.map(k=>`<option value="${k}">${wh(k).name} (sisa ${Math.max(0,st.active[k]-used(k))} pallet)</option>`).join("")}</select>
+ <label>Barang</label><input id="in" list="nm" value="${nm[0]||""}"><datalist id="nm">${nm.map(n=>`<option value="${n}">`).join("")}</datalist>
+ <label>Jumlah (dus, 1 pallet = 50 dus)</label><input id="iq" type="number" inputmode="numeric" min="1" value="100">
  <label>Tanggal kirim ke gudang</label><input id="id" type="date" value="${d}">
  <button class="btn" style="margin-top:16px" data-a="ig">Jadwalkan</button>`)},
-ig(){const q=parseInt($("#iq").value)||0;if(q<1)return toast("Isi jumlah minimal 1 dus");
- st.inb.push({id:st.n++,sku:+$("#is").value,qty:q,date:$("#id").value,s:0});close();render();toast("Jadwal stok masuk dibuat")},
-inr(id){const i=st.inb.find(x=>x.id==id);i.s=1;sku(i.sku).qty+=i.qty;render();toast("Stok bertambah "+i.qty+" dus")},
+ig(){const q=parseInt($("#iq").value)||0,k=$("#iw").value,n=$("#in").value.trim();
+ if(!n)return toast("Isi nama barang");if(q<1)return toast("Isi jumlah minimal 1 dus");
+ if(Math.ceil((qtyAt(k)+pend(k)+q)/DPP)>st.active[k])return toast("Melebihi jatah "+st.active[k]+" pallet di "+wh(k).name+". Tambah slot dulu.");
+ st.inb.push({id:st.n++,name:n,wh:k,qty:q,date:$("#id").value,s:0});close();render();toast("Jadwal stok masuk dibuat")},
+inr(id){const i=st.inb.find(x=>x.id==id);i.s=1;let s=st.skus.find(x=>x.name===inN(i)&&x.wh===inW(i));
+ if(!s){s={id:st.n++,name:inN(i),wh:inW(i),qty:0,ready:true};st.skus.push(s)}s.qty+=i.qty;render();toast("Stok bertambah "+i.qty+" dus")},
 no(){const c=st.skus.filter(s=>s.qty>0&&s.ready);if(!c.length)return toast("Tidak ada stok yang tampil di marketplace");
  const s=c[Math.random()*c.length|0],q=Math.min(s.qty,5+(Math.random()*25|0));s.qty-=q;
  st.orders.push({id:"SO-"+st.oid++,toko:TOKO[Math.random()*TOKO.length|0],sku:s.id,qty:q,wh:s.wh,s:0});render();toast("Order masuk, stok berkurang "+q+" dus")},
