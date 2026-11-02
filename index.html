@@ -50,19 +50,15 @@ input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:
 .sw{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px}
 .sw input{width:auto}
 .tot{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.roles{display:flex;gap:6px;margin-top:10px}.roles button{flex:1;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:8px;padding:6px 0;font:inherit;font-size:13px}.roles button.on{background:#fff;color:#12355B;font-weight:700}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
-<header class="top"><h1 id="t">Beranda</h1><small>PT Keramik Nusantara (supplier contoh)</small></header>
+<header class="top"><h1 id="t">Beranda</h1><small id="who"></small><div class="roles"><button data-role="sup">Supplier</button><button data-role="ops">Ops MSS</button><button data-role="toko">Toko</button></div></header>
 <main id="app"></main>
-<nav class="tabs">
-<button data-t="home"><i>🏠</i>Beranda</button>
-<button data-t="wh"><i>🏭</i>Gudang</button>
-<button data-t="stok"><i>📦</i>Stok</button>
-<button data-t="ord"><i>🧾</i>Order</button>
-</nav>
+<nav class="tabs" id="nav"></nav>
 <div class="sheet" id="sh"><div class="panel" id="pn"></div></div>
 <div class="toast" id="toast"></div>
 <script>
@@ -84,7 +80,7 @@ function seed(){return{active:{bjm:10},reqs:[],n:10,oid:1003,
 skus:[{id:1,name:"Keramik Lantai 40x40 Putih",wh:"bjm",qty:320,ready:true},{id:2,name:"Keramik Dinding 30x60 Abu",wh:"bjm",qty:140,ready:true},{id:3,name:"Keramik Lantai 60x60 Krem",wh:"bjm",qty:0,ready:false}],
 inb:[],orders:[{id:"SO-1001",toko:"TB Jaya Abadi",sku:1,qty:20,wh:"bjm",s:2},{id:"SO-1002",toko:"UD Sinar Makmur",sku:2,qty:12,wh:"bjm",s:1}]}}
 function load(){try{const s=localStorage.getItem(K);if(s)return JSON.parse(s)}catch(e){}return seed()}
-let st=load(),tab="home",reg="Semua",cur=null;
+let st=load(),role="sup",tab="home",reg="Semua",cur=null;
 function save(){try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}}
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),2200)}
 const open=h=>{$("#pn").innerHTML=h;$("#sh").classList.add("open")},close=()=>$("#sh").classList.remove("open");
@@ -95,7 +91,7 @@ home(){
  const stock=st.skus.reduce((a,s)=>a+s.qty,0);
  const sim=Object.entries(st.active).reduce((a,[k,p])=>a+p*wh(k).rate*30,0);
  const han=st.orders.length*HANDLING;
- return `<div class="note">Prototype: data, tarif, dan biaya hanya contoh ilustrasi.</div>
+ return `<div class="note">Prototype: data, tarif, dan biaya hanya contoh ilustrasi. Ganti peran di atas untuk melihat sisi Ops MSS dan Toko.</div>
  <div class="grid"><div class="card stat"><b>${pal}</b><span class="muted">Pallet terpakai</span></div>
  <div class="card stat"><b>${stock.toLocaleString("id-ID")}</b><span class="muted">Total stok (dus)</span></div>
  <div class="card stat"><b>${Object.keys(st.active).length}</b><span class="muted">Gudang aktif</span></div>
@@ -117,9 +113,9 @@ whs(){
   <div class="row muted"><span>${w.free} pallet kosong</span><span>${rp(w.rate)} per pallet/hari</span></div>
   <div class="row muted"><span>${w.stores} toko dalam jangkauan</span><span>Tiba ${w.eta}</span></div></div>`}).join("");
  h+=`<h2>Pengajuan saya</h2>`;
- h+=st.reqs.length?st.reqs.slice().reverse().map(r=>`<div class="card"><div class="row"><b>${wh(r.wh).name}</b><span class="badge ${r.s?"ok":"wait"}">${r.s?"Disetujui":"Menunggu review ops"}</span></div>
+ h+=st.reqs.length?st.reqs.slice().reverse().map(r=>`<div class="card"><div class="row"><b>${wh(r.wh).name}</b>${RB(r.s)}</div>
   <div class="muted">${r.pallets} pallet, ${r.months} bulan, ${r.cat}</div>
-  ${r.s?"":`<button class="btn sm ghost" style="margin-top:8px" data-a="ap" data-id="${r.id}">Simulasikan disetujui ops</button>`}</div>`).join(""):`<p class="muted">Belum ada pengajuan. Pilih gudang di atas untuk mengajukan slot.</p>`;
+</div>`).join(""):`<p class="muted">Belum ada pengajuan. Pilih gudang di atas untuk mengajukan slot.</p>`;
  return h},
 stok(){
  let h=`<button class="btn" data-a="inb">Jadwalkan stok masuk</button><h2>Inventory</h2>`;
@@ -129,18 +125,46 @@ stok(){
  h+=`<h2>Stok masuk</h2>`;
  h+=st.inb.length?st.inb.slice().reverse().map(i=>`<div class="card"><div class="row"><b>${sku(i.sku).name}</b><span class="badge ${i.s?"ok":"wait"}">${i.s?"Diterima gudang":"Dijadwalkan"}</span></div>
   <div class="muted">${i.qty} dus ke ${wh(sku(i.sku).wh).name}, ${new Date(i.date).toLocaleDateString("id-ID",{day:"numeric",month:"short"})}</div>
-  ${i.s?"":`<button class="btn sm ghost" style="margin-top:8px" data-a="inr" data-id="${i.id}">Simulasikan diterima gudang</button>`}</div>`).join(""):`<p class="muted">Belum ada jadwal. Jadwalkan stok masuk agar barang tampil di marketplace.</p>`;
+</div>`).join(""):`<p class="muted">Belum ada jadwal. Jadwalkan stok masuk agar barang tampil di marketplace.</p>`;
  return h},
 ord(){
- let h=`<button class="btn" data-a="no">Simulasikan order baru dari toko</button><h2>Order dari toko</h2>`;
+ let h=`<p class="muted">Order masuk dari toko dan diproses oleh tim ops gudang.</p><h2>Order dari toko</h2>`;
  h+=st.orders.slice().reverse().map(o=>`<div class="card"><div class="row"><b>${o.id}</b><span class="badge ${o.s==2?"ok":"wait"}">${ST[o.s]}</span></div>
   <div>${o.toko}</div><div class="muted">${o.qty} dus ${sku(o.sku).name}</div>
   <div class="muted">Dikirim dari ${wh(o.wh).name}, tiba ${wh(o.wh).eta}</div>
-  ${o.s<2?`<button class="btn sm ghost" style="margin-top:8px" data-a="adv" data-id="${o.id}">Majukan status</button>`:""}</div>`).join("");
+</div>`).join("");
  return h}};
+const ME="TB Jaya Abadi";
+const RB=s=>`<span class="badge ${s==1?"ok":"wait"}">${["Menunggu review ops","Disetujui","Ditolak"][s]}</span>`;
+const emp=t=>`<p class="muted">${t}</p>`;
+const fd=d=>new Date(d).toLocaleDateString("id-ID",{day:"numeric",month:"short"});
+Object.assign(V,{
+oslot(){const p=st.reqs.filter(r=>r.s==0),d=st.reqs.filter(r=>r.s>0);
+ return `<p class="muted">${p.length} pengajuan menunggu keputusan.</p><h2>Menunggu review</h2>`+(p.length?p.map(r=>`<div class="card"><div class="row"><b>PT Keramik Nusantara</b>${RB(0)}</div>
+ <div>${wh(r.wh).name}</div><div class="muted">${r.pallets} pallet, ${r.months} bulan, ${r.cat}</div><div class="muted">Slot kosong di gudang: ${wh(r.wh).free} pallet</div>
+ <div class="row" style="margin-top:10px"><button class="btn sm ghost" data-a="rj" data-id="${r.id}">Tolak</button><button class="btn sm" data-a="ap" data-id="${r.id}">Setujui</button></div></div>`).join(""):emp("Tidak ada pengajuan. Ajukan slot dari sisi Supplier."))
+ +`<h2>Sudah diputuskan</h2>`+(d.length?d.map(r=>`<div class="card"><div class="row"><b>${wh(r.wh).name}</b>${RB(r.s)}</div><div class="muted">${r.pallets} pallet, ${r.months} bulan</div></div>`).join(""):emp("Belum ada."))},
+oinb(){const p=st.inb.filter(i=>!i.s),d=st.inb.filter(i=>i.s),c=i=>`${i.qty} dus ${sku(i.sku).name}, ${wh(sku(i.sku).wh).name}`;
+ return `<h2 style="margin-top:0">Jadwal kedatangan</h2>`+(p.length?p.map(i=>`<div class="card"><b>${c(i)}</b><div class="muted">Tiba ${fd(i.date)}</div>
+ <button class="btn sm" style="margin-top:10px" data-a="inr" data-id="${i.id}">Tandai diterima</button></div>`).join(""):emp("Tidak ada kedatangan terjadwal."))
+ +`<h2>Sudah diterima</h2>`+(d.length?d.map(i=>`<div class="card"><b>${c(i)}</b></div>`).join(""):emp("Belum ada."))},
+oord(){return `<p class="muted">Pick, pack, dan kirim order dari stok gudang.</p>`+st.orders.slice().sort((a,b)=>a.s-b.s).map(x=>`<div class="card"><div class="row"><b>${x.id}</b><span class="badge ${x.s==2?"ok":"wait"}">${ST[x.s]}</span></div>
+ <div>${x.toko}</div><div class="muted">${x.qty} dus ${sku(x.sku).name}, dari ${wh(x.wh).name}</div>
+ ${x.s<2?`<button class="btn sm" style="margin-top:10px" data-a="adv" data-id="${x.id}">${x.s?"Tandai selesai":"Tandai dikirim"}</button>`:""}</div>`).join("")},
+kat(){const c=st.skus.filter(s=>s.ready&&s.qty>0);
+ return `<p class="muted">Barang yang tersedia di gudang dekat toko Anda.</p>`+(c.length?c.map(s=>`<div class="card"><div class="row"><b>${s.name}</b><span class="badge ok">Ready Stock</span></div>
+ <div class="muted">PT Keramik Nusantara</div><div class="muted">Dari ${wh(s.wh).name}, tiba ${wh(s.wh).eta}</div>${kv("Stok",s.qty.toLocaleString("id-ID")+" dus")}
+ <button class="btn" style="margin-top:10px" data-a="tp" data-id="${s.id}">Pesan</button></div>`).join(""):emp("Belum ada barang Ready Stock. Supplier perlu mengirim stok ke gudang dulu."))},
+tord(){const o=st.orders.filter(x=>x.toko===ME).reverse();
+ return o.length?o.map(x=>`<div class="card"><div class="row"><b>${x.id}</b><span class="badge ${x.s==2?"ok":"wait"}">${ST[x.s]}</span></div>
+ <div>${x.qty} dus ${sku(x.sku).name}</div><div class="muted">Dari ${wh(x.wh).name}, tiba ${wh(x.wh).eta}</div></div>`).join(""):emp("Belum ada pesanan. Pilih barang di Katalog.")}});
+const TABS={sup:[["home","🏠","Beranda"],["wh","🏭","Gudang"],["stok","📦","Stok"],["ord","🧾","Order"]],ops:[["oslot","📝","Slot"],["oinb","🚚","Stok masuk"],["oord","📋","Order"]],toko:[["kat","🛒","Katalog"],["tord","🧾","Pesanan"]]};
+const WHO={sup:"PT Keramik Nusantara (supplier contoh)",ops:"Tim ops MSS",toko:ME+" (toko contoh)"};
+const TT={home:"Beranda",wh:"Cari gudang",stok:"Stok saya",ord:"Order",oslot:"Pengajuan slot",oinb:"Stok masuk",oord:"Order gudang",kat:"Katalog Ready Stock",tord:"Pesanan saya"};
 function render(){
- $("#t").textContent={home:"Beranda",wh:"Cari gudang",stok:"Stok saya",ord:"Order"}[tab];
- document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+ $("#t").textContent=TT[tab];$("#who").textContent=WHO[role];
+ document.querySelectorAll(".roles button").forEach(b=>b.classList.toggle("on",b.dataset.role===role));
+ $("#nav").innerHTML=TABS[role].map(t=>`<button data-t="${t[0]}" class="${t[0]===tab?"on":""}"><i>${t[1]}</i>${t[2]}</button>`).join("");
  $("#app").innerHTML=V[tab==="wh"?"whs":tab]();save()}
 function est(){const w=wh(cur);if(!w)return;const p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1)),m=+$("#fm").value;
  $("#fe").textContent=rp(p*w.rate*30)+" per bulan, "+rp(p*w.rate*30*m)+" untuk "+m+" bulan"}
@@ -173,8 +197,14 @@ no(){const c=st.skus.filter(s=>s.qty>0&&s.ready);if(!c.length)return toast("Tida
  st.orders.push({id:"SO-"+st.oid++,toko:TOKO[Math.random()*TOKO.length|0],sku:s.id,qty:q,wh:s.wh,s:0});render();toast("Order masuk, stok berkurang "+q+" dus")},
 adv(id){const o=st.orders.find(x=>x.id===id);if(o.s<2)o.s++;render()},
 reset(){st=seed();reg="Semua";render();toast("Data contoh dikembalikan")}};
+Object.assign(A,{rj(id){st.reqs.find(x=>x.id==id).s=2;render();toast("Pengajuan ditolak")},
+tp(id){const s=sku(+id);open(`<h2 style="margin:0">${s.name}</h2><p class="muted">Dari ${wh(s.wh).name}, tiba ${wh(s.wh).eta}. Stok ${s.qty} dus.</p>
+<label>Jumlah (dus)</label><input id="tq" type="number" inputmode="numeric" min="1" max="${s.qty}" value="10"><button class="btn" style="margin-top:16px" data-a="tpg" data-id="${s.id}">Kirim pesanan</button>`)},
+tpg(id){const s=sku(+id),q=Math.max(1,Math.min(s.qty,parseInt($("#tq").value)||1));s.qty-=q;
+ st.orders.push({id:"SO-"+st.oid++,toko:ME,sku:s.id,qty:q,wh:s.wh,s:0});close();tab="tord";render();toast("Pesanan dikirim ke gudang")}});
 document.addEventListener("click",e=>{
  if(e.target.id==="sh")return close();
+ const ro=e.target.closest("[data-role]");if(ro){role=ro.dataset.role;tab=TABS[role][0][0];render();return scrollTo(0,0)}
  const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;render();return scrollTo(0,0)}
  const r=e.target.closest("[data-r]");if(r){reg=r.dataset.r;return render()}
  const a=e.target.closest("[data-a]");if(a&&A[a.dataset.a])A[a.dataset.a](a.dataset.id)});
