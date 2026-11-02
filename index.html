@@ -67,8 +67,7 @@ const WH=[
 {id:"bjm",name:"MSS Banjarmasin",city:"Banjarmasin",reg:"Kalimantan",type:"MSS",free:120,tot:300,rate:12000,stores:84,eta:"1 hari"},
 {id:"ptk",name:"MSS Pontianak",city:"Pontianak",reg:"Kalimantan",type:"MSS",free:60,tot:200,rate:11000,stores:51,eta:"1 hari"},
 {id:"smd",name:"Gudang Mitra Samarinda",city:"Samarinda",reg:"Kalimantan",type:"Partner",free:90,tot:150,rate:10000,stores:67,eta:"1-2 hari"},
-{id:"mks",name:"MSS Makassar",city:"Makassar",reg:"Sulawesi",type:"MSS",free:150,tot:400,rate:13000,stores:112,eta:"1 hari"},
-{id:"mdn",name:"Gudang Mitra Medan",city:"Medan",reg:"Sumatera",type:"Partner",free:40,tot:180,rate:10500,stores:95,eta:"1-2 hari"}];
+{id:"mks",name:"MSS Makassar",city:"Makassar",reg:"Sulawesi",type:"MSS",free:150,tot:400,rate:13000,stores:112,eta:"1 hari"}];
 const TOKO=["TB Jaya Abadi","UD Sinar Makmur","TB Maju Bersama","TB Sentosa","UD Karya Mandiri"];
 const ST=["Diproses","Dikirim","Selesai"];
 const rp=n=>"Rp "+Math.round(n).toLocaleString("id-ID");
@@ -89,7 +88,7 @@ const V={
 home(){
  const pal=Object.values(st.active).reduce((a,b)=>a+b,0);
  const stock=st.skus.reduce((a,s)=>a+s.qty,0);
- const sim=Object.entries(st.active).reduce((a,[k,p])=>a+p*wh(k).rate*30,0);
+ const sim=Object.entries(st.active).reduce((a,[k,p])=>a+p*wh(k).rate*16,0);
  const han=st.orders.length*HANDLING;
  return `<div class="note">Prototype: data, tarif, dan biaya hanya contoh ilustrasi. Ganti peran di atas untuk melihat sisi Ops MSS dan Toko.</div>
  <div class="grid"><div class="card stat"><b>${pal}</b><span class="muted">Pallet terpakai</span></div>
@@ -97,17 +96,17 @@ home(){
  <div class="card stat"><b>${Object.keys(st.active).length}</b><span class="muted">Gudang aktif</span></div>
  <div class="card stat"><b>${st.orders.length}</b><span class="muted">Order bulan ini</span></div></div>
  <div class="card"><div class="row"><b>Estimasi tagihan bulan ini</b><span class="badge ok">Pilot: gratis simpan 2 minggu</span></div>
- ${kv("Biaya simpan",rp(sim))}${kv(`Handling dan kirim (${st.orders.length} order)`,rp(han))}
+ ${kv("Biaya simpan (gratis 14 hari pertama)",rp(sim))}${kv(`Handling dan kirim (${st.orders.length} order)`,rp(han))}
  <div class="tot">${kv("Total",rp(sim+han))}</div></div>
  <div class="card"><b>Cara kerja</b><p class="muted" style="margin-top:6px">Pilih gudang dekat toko target, ajukan slot, kirim stok, lalu stok tampil sebagai Ready Stock di marketplace dan order toko otomatis dikirim dari gudang terdekat.</p></div>
- <button class="btn ghost" data-a="reset">Reset data contoh</button>`},
+ <button class="btn" style="margin-bottom:10px" data-a="inv">Lihat invoice bulan ini</button><button class="btn ghost" data-a="reset">Reset data contoh</button>`},
 whs(){
  const rs=["Semua",...new Set(WH.map(w=>w.reg))];
  const list=WH.filter(w=>reg==="Semua"||w.reg===reg);
  let h=`<div class="chips">${rs.map(r=>`<button class="chip ${r===reg?"on":""}" data-r="${r}">${r}</button>`).join("")}</div>`;
  h+=list.map(w=>{const u=Math.round((w.tot-w.free)/w.tot*20);
-  return `<div class="card" data-a="wd" data-id="${w.id}" role="button" tabindex="0">
-  <div class="row"><b>${w.name}</b><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner"}</span></div>
+  return `<div class="card" data-a="wd" data-id="${w.id}" role="button" tabindex="0" style="${w.type==="MSS"?"":"opacity:.6"}">
+  <div class="row"><b>${w.name}</b><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner, fase 2"}</span></div>
   <div class="muted">${w.city}, ${w.reg}${st.active[w.id]?" (gudang aktif)":""}</div>
   <div class="pal">${Array.from({length:20},(_,i)=>`<i class="${i<u?"u":""}"></i>`).join("")}</div>
   <div class="row muted"><span>${w.free} pallet kosong</span><span>${rp(w.rate)} per pallet/hari</span></div>
@@ -167,15 +166,15 @@ function render(){
  $("#nav").innerHTML=TABS[role].map(t=>`<button data-t="${t[0]}" class="${t[0]===tab?"on":""}"><i>${t[1]}</i>${t[2]}</button>`).join("");
  $("#app").innerHTML=V[tab==="wh"?"whs":tab]();save()}
 function est(){const w=wh(cur);if(!w)return;const p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1)),m=+$("#fm").value;
- $("#fe").textContent=rp(p*w.rate*30)+" per bulan, "+rp(p*w.rate*30*m)+" untuk "+m+" bulan"}
+ $("#fe").textContent=rp(p*w.rate*(30*m-14))+" untuk "+m+" bulan (gratis simpan 14 hari pertama sudah dipotong). Tarif normal "+rp(p*w.rate*30)+" per bulan"}
 const A={
-wd(id){cur=id;const w=wh(id);open(`<div class="row"><h2 style="margin:0">${w.name}</h2><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner"}</span></div>
+wd(id){cur=id;const w=wh(id);if(w.type!=="MSS")return toast("Gudang partner tersedia di fase 2");open(`<div class="row"><h2 style="margin:0">${w.name}</h2><span class="badge ${w.type==="MSS"?"mss":""}">${w.type==="MSS"?"Milik MSS":"Partner"}</span></div>
  <p class="muted">${w.city}, ${w.reg}</p>
  <div class="grid" style="margin-top:12px"><div class="card stat"><b>${w.free}</b><span class="muted">Pallet kosong</span></div><div class="card stat"><b>${w.stores}</b><span class="muted">Toko dalam jangkauan</span></div></div>
  ${kv("Tarif simpan",rp(w.rate)+" per pallet/hari")}${kv("Handling dan kirim",rp(HANDLING)+" per order")}${kv("Estimasi tiba di toko",w.eta)}
  <label>Jumlah pallet</label><input id="fp" type="number" inputmode="numeric" min="1" max="${w.free}" value="10">
  <label>Durasi</label><select id="fm"><option value="1">1 bulan</option><option value="3">3 bulan</option><option value="6">6 bulan</option></select>
- <label>Kategori barang</label><select id="fc"><option>Keramik</option><option>Cat</option><option>Semen</option><option>Baja ringan</option></select>
+ <label>Kategori barang (fokus pilot)</label><select id="fc" disabled><option>Keramik</option></select>
  <div class="card" style="margin-top:14px"><div class="muted">Estimasi biaya simpan</div><b id="fe"></b></div>
  <button class="btn" data-a="rq" data-id="${w.id}">Ajukan slot</button>`);est()},
 rq(id){const w=wh(id),p=Math.max(1,Math.min(w.free,parseInt($("#fp").value)||1));
@@ -197,7 +196,11 @@ no(){const c=st.skus.filter(s=>s.qty>0&&s.ready);if(!c.length)return toast("Tida
  st.orders.push({id:"SO-"+st.oid++,toko:TOKO[Math.random()*TOKO.length|0],sku:s.id,qty:q,wh:s.wh,s:0});render();toast("Order masuk, stok berkurang "+q+" dus")},
 adv(id){const o=st.orders.find(x=>x.id===id);if(o.s<2)o.s++;render()},
 reset(){st=seed();reg="Semua";render();toast("Data contoh dikembalikan")}};
-Object.assign(A,{rj(id){st.reqs.find(x=>x.id==id).s=2;render();toast("Pengajuan ditolak")},
+Object.assign(A,{inv(){const e=Object.entries(st.active),sim=e.reduce((a,[k,p])=>a+p*wh(k).rate*16,0),han=st.orders.length*HANDLING;
+ open(`<h2 style="margin:0">Invoice bulan ini (contoh)</h2><p class="muted">Gratis simpan 14 hari pertama sudah dipotong.</p>
+ ${e.map(([k,p])=>kv(`${wh(k).name}, ${p} pallet x 16 hari`,rp(p*wh(k).rate*16))).join("")}
+ ${kv(`Handling dan kirim, ${st.orders.length} order x ${rp(HANDLING)}`,rp(han))}<div class="tot">${kv("Total",rp(sim+han))}</div>`)},
+rj(id){st.reqs.find(x=>x.id==id).s=2;render();toast("Pengajuan ditolak")},
 tp(id){const s=sku(+id);open(`<h2 style="margin:0">${s.name}</h2><p class="muted">Dari ${wh(s.wh).name}, tiba ${wh(s.wh).eta}. Stok ${s.qty} dus.</p>
 <label>Jumlah (dus)</label><input id="tq" type="number" inputmode="numeric" min="1" max="${s.qty}" value="10"><button class="btn" style="margin-top:16px" data-a="tpg" data-id="${s.id}">Kirim pesanan</button>`)},
 tpg(id){const s=sku(+id),q=Math.max(1,Math.min(s.qty,parseInt($("#tq").value)||1));s.qty-=q;
